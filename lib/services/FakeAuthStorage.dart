@@ -1,5 +1,5 @@
 class FakeAuthStorage {
-  static Map<String, String> _userData = {};
+  static final Map<String, String> _userData = {};
 
   static void registerUser(String email, String password) {
     _userData['email'] = email;
