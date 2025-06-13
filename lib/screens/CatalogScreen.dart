@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -11,7 +12,7 @@ class CatalogScreen extends StatefulWidget {
 class _CatalogScreenState extends State<CatalogScreen> {
   List<dynamic> _movies = [];
   List<dynamic> _filteredMovies = [];
-  List<dynamic> _favorites = [];
+  final List<dynamic> _favorites = [];
   String _searchQuery = '';
   String _selectedGenre = 'Todos';
 
@@ -57,7 +58,30 @@ class _CatalogScreenState extends State<CatalogScreen> {
     });
   }
 
+  void _cerrarSesion() {
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
+  Future<void> _launchURL(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la URL')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al abrir URL: $e')),
+      );
+    }
+  }
+
   void _showMovieDetailsDialog(BuildContext context, Map<String, dynamic> movie) {
+    final enlaces = movie['enlaces'] ?? {};
+    final String? trailerUrl = enlaces['trailer'];
+    final String? peliculaUrl = enlaces['URL'];
+
     showDialog(
       context: context,
       builder: (context) {
@@ -67,23 +91,38 @@ class _CatalogScreenState extends State<CatalogScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.network(
-                  movie['enlaces']?['image'] ?? '',
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.broken_image, size: 100),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    enlaces['image'] ?? '',
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.broken_image, size: 100),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Text('Director: ${movie['detalles']?['director'] ?? 'Desconocido'}'),
+                const SizedBox(height: 12),
+                Text('Director: ${movie['detalles']?['director'] ?? 'Desconocido'}',
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text('Duración: ${movie['detalles']?['duracion'] ?? 'N/A'}'),
                 Text('Año: ${movie['anio'] ?? 'Desconocido'}'),
+                const SizedBox(height: 12),
                 Text(movie['descripcion'] ?? 'No hay descripción'),
               ],
             ),
           ),
           actions: [
+            if (trailerUrl != null && trailerUrl.isNotEmpty)
+              TextButton(
+                onPressed: () => _launchURL(trailerUrl),
+                child: const Text('VER TRAILER'),
+              ),
+            if (peliculaUrl != null && peliculaUrl.isNotEmpty)
+              TextButton(
+                onPressed: () => _launchURL(peliculaUrl),
+                child: const Text('VER PELÍCULA'),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
+              child: const Text('CERRAR'),
             ),
           ],
         );
@@ -102,88 +141,153 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final genres = _getGenres();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Catálogo de Películas"),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Buscar película...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (value) {
-                _searchQuery = value;
-                _filterMovies();
-              },
+      backgroundColor: Colors.white,
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Column(
+          children: [
+            // Título y botón cerrar sesión en fila
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Catálogo de Películas',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueAccent,
+                        fontSize: 22,
+                      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.exit_to_app, color: Colors.blueAccent),
+                  tooltip: 'Cerrar sesión',
+                  onPressed: _cerrarSesion,
+                ),
+              ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: DropdownButtonFormField<String>(
-              value: _selectedGenre,
-              decoration: const InputDecoration(
-                labelText: 'Filtrar por género',
-                border: OutlineInputBorder(),
-              ),
-              items: genres.map((genre) {
-                return DropdownMenuItem(
-                  value: genre,
-                  child: Text(genre),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  _selectedGenre = value;
-                  _filterMovies();
-                }
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _filteredMovies.isEmpty
-                ? const Center(child: Text("No se encontraron películas"))
-                : ListView.builder(
-                    itemCount: _filteredMovies.length,
-                    itemBuilder: (context, index) {
-                      final movie = _filteredMovies[index];
-                      final isFavorite = _favorites.contains(movie);
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 6, horizontal: 10),
-                        child: ListTile(
-                          leading: Image.network(
-                            movie['enlaces']?['image'] ?? '',
-                            width: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.broken_image),
-                          ),
-                          title: Text(movie['titulo'] ?? 'Sin título'),
-                          subtitle: Text(
-                            'Géneros: ${(movie['genero'] as List).join(', ')}\nValoración: ${movie['detalles']?['valoracion'] ?? 'N/A'}',
-                          ),
-                          isThreeLine: true,
-                          trailing: IconButton(
-                            icon: Icon(
-                              isFavorite
-                                  ? Icons.star
-                                  : Icons.star_border_outlined,
-                              color: isFavorite ? Colors.amber : null,
-                            ),
-                            onPressed: () => _toggleFavorite(movie),
-                          ),
-                          onTap: () => _showMovieDetailsDialog(context, movie),
-                        ),
-                      );
+            const SizedBox(height: 12),
+
+            // Barra de búsqueda y dropdown
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Buscar película...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.search),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                    onChanged: (value) {
+                      _searchQuery = value;
+                      _filterMovies();
                     },
                   ),
-          ),
-        ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedGenre,
+                    decoration: InputDecoration(
+                      labelText: 'Género',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    items: genres.map((genre) {
+                      return DropdownMenuItem(
+                        value: genre,
+                        child: Text(genre),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        _selectedGenre = value;
+                        _filterMovies();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Lista de películas
+            Expanded(
+              child: _filteredMovies.isEmpty
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.movie_filter_outlined,
+                            size: 64, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text(
+                          "No se encontraron películas",
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      itemCount: _filteredMovies.length,
+                      itemBuilder: (context, index) {
+                        final movie = _filteredMovies[index];
+                        final isFavorite = _favorites.contains(movie);
+                        return Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 4),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(8),
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                movie['enlaces']?['image'] ?? '',
+                                width: 70,
+                                height: 90,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.broken_image, size: 50),
+                              ),
+                            ),
+                            title: Text(
+                              movie['titulo'] ?? 'Sin título',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Géneros: ${(movie['genero'] as List).join(', ')}\nValoración: ${movie['detalles']?['valoracion'] ?? 'N/A'}',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            isThreeLine: true,
+                            trailing: IconButton(
+                              icon: Icon(
+                                isFavorite
+                                    ? Icons.star
+                                    : Icons.star_border_outlined,
+                                color: isFavorite ? Colors.amber : Colors.grey,
+                                size: 28,
+                              ),
+                              onPressed: () => _toggleFavorite(movie),
+                            ),
+                            onTap: () =>
+                                _showMovieDetailsDialog(context, movie),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
