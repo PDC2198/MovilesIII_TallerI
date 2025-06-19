@@ -14,7 +14,7 @@ class WelcomeScreen extends StatelessWidget {
           children: [
             Text('👨‍💻 Desarrolladores: Pablo Del Corral y Dennis Proaño'),
             SizedBox(height: 8),
-            Text('📚 Materia: Aplicaciones Móviles II'),
+            Text('📚 Materia: Aplicaciones Móviles III'),
             SizedBox(height: 8),
             Text('✔️ Versión: 1.0.0'),
           ],

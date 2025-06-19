@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:taller_1/screens/MovieScreen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -24,8 +25,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<void> _loadMovies() async {
     try {
-      final jsonString =
-          await DefaultAssetBundle.of(context).loadString('assets/data.json');
+      final jsonString = await DefaultAssetBundle.of(
+        context,
+      ).loadString('assets/data.json');
       final jsonData = json.decode(jsonString);
       setState(() {
         _movies = jsonData['peliculas'];
@@ -41,7 +43,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
       _filteredMovies = _movies.where((movie) {
         final title = (movie['titulo'] ?? '').toLowerCase();
         final matchesSearch = title.contains(_searchQuery.toLowerCase());
-        final matchesGenre = _selectedGenre == 'Todos' ||
+        final matchesGenre =
+            _selectedGenre == 'Todos' ||
             (movie['genero'] as List).contains(_selectedGenre);
         return matchesSearch && matchesGenre;
       }).toList();
@@ -71,16 +74,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al abrir URL: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al abrir URL: $e')));
     }
   }
 
-  void _showMovieDetailsDialog(BuildContext context, Map<String, dynamic> movie) {
+  void _showMovieDetailsDialog(
+    BuildContext context,
+    Map<String, dynamic> movie,
+  ) {
     final enlaces = movie['enlaces'] ?? {};
     final String? trailerUrl = enlaces['trailer'];
-    final String? peliculaUrl = enlaces['URL'];
+    final String? peliculaUrl = enlaces['url'];
 
     showDialog(
       context: context,
@@ -100,8 +106,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('Director: ${movie['detalles']?['director'] ?? 'Desconocido'}',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  'Director: ${movie['detalles']?['director'] ?? 'Desconocido'}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 Text('Duración: ${movie['detalles']?['duracion'] ?? 'N/A'}'),
                 Text('Año: ${movie['anio'] ?? 'Desconocido'}'),
                 const SizedBox(height: 12),
@@ -117,9 +125,26 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ),
             if (peliculaUrl != null && peliculaUrl.isNotEmpty)
               TextButton(
-                onPressed: () => _launchURL(peliculaUrl),
-                child: const Text('VER PELÍCULA'),
-              ),
+  onPressed: peliculaUrl.isNotEmpty
+      ? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Moviescreen(youtubeUrl: peliculaUrl),
+            ),
+          );
+        }
+      : null,
+  child: Text(
+    'VER PELÍCULA',
+    style: TextStyle(
+      color: peliculaUrl.isNotEmpty
+          ? Theme.of(context).colorScheme.primary
+          : Colors.grey,
+    ),
+  ),
+),
+
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('CERRAR'),
@@ -153,10 +178,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 Text(
                   'Catálogo de Películas',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
-                        fontSize: 22,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                    fontSize: 22,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.exit_to_app, color: Colors.blueAccent),
@@ -197,13 +222,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                      ),
                     ),
                     items: genres.map((genre) {
-                      return DropdownMenuItem(
-                        value: genre,
-                        child: Text(genre),
-                      );
+                      return DropdownMenuItem(value: genre, child: Text(genre));
                     }).toList(),
                     onChanged: (value) {
                       if (value != null) {
@@ -223,8 +247,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Icons.movie_filter_outlined,
-                            size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.movie_filter_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 8),
                         Text(
                           "No se encontraron películas",
@@ -240,9 +267,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         return Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
                           margin: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 4),
+                            vertical: 8,
+                            horizontal: 4,
+                          ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(8),
                             leading: ClipRRect(
@@ -259,7 +289,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             title: Text(
                               movie['titulo'] ?? 'Sin título',
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 6),

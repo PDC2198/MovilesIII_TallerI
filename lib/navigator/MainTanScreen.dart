@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:taller_1/screens/CatalogScreen.dart';
-import 'package:taller_1/screens/MovieScreen.dart';
+import 'package:taller_1/screens/QRScannerScreen.dart';
 
 class MainTabScreen extends StatefulWidget {
   const MainTabScreen({super.key});
@@ -14,7 +14,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
   final List<Widget> _screens = [
     const CatalogScreen(),
-    const Moviescreen(),
+    const QRScannerScreen(),
   ];
 
   @override
@@ -54,8 +54,8 @@ class _MainTabScreenState extends State<MainTabScreen> {
               label: 'Catálogo',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.ondemand_video_rounded),
-              label: 'Reproductor',
+              icon: Icon(Icons.qr_code_scanner),
+              label: 'QR',
             ),
           ],
         ),
